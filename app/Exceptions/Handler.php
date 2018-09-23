@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+
 class Handler extends ExceptionHandler
 {
     /**
@@ -45,6 +48,26 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $e)
     {
+        // Not found exception handler
+        if($e instanceof NotFoundHttpException) {
+            return response()->json([
+                'error' => [
+                    'description' => 'Invalid URI',
+                    'messages' => []
+                ]
+            ], 404);
+        }
+
+        // Method not allowed exception handler
+        if($e instanceof MethodNotAllowedHttpException) {
+            return response()->json([
+                'error' => [
+                    'description' => 'Method Not Allowed',
+                    'messages' => []
+                ]
+            ], 405);
+        }
+		
         return parent::render($request, $e);
     }
 }

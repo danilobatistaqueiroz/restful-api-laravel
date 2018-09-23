@@ -10,7 +10,7 @@ use App\Job;
 class JobsController extends Controller
 {
     public function __construct() {
-        $this->middleware('auth', ['except' => ['index', 'show']]);
+        $this->middleware('jwt.auth', ['except' => ['index', 'show']]);
     }
 	
     public function index()
@@ -34,8 +34,26 @@ class JobsController extends Controller
 	
     public function store(Request $request)
     {
+		$data = $request->all();
+		
+		$validator = Validator::make($data, [
+            'title' => 'required|max:255',
+            'description' => 'required',
+            'local' => 'required',
+            'remote' => 'in:yes,no',
+            'type' => 'integer',
+        ]);
+
+        if($validator->fails()) {
+            return response()->json([
+                'message'   => 'Validation Failed',
+                'errors'    => $validator->errors()->all()
+            ], 422);
+        }
+		
         $job = new Job();
-        $job->fill($request->all());
+        $job->fill($data);
+		$job->company_id = \Auth::user()->id;
         $job->save();
 
         return response()->json($job, 201);
@@ -51,6 +69,25 @@ class JobsController extends Controller
             ], 404);
         }
 
+		if(\Auth::user()->id != $job->company_id) {
+            return response()->json([
+                'message'   => 'You haven\'t permission to change this entry',
+            ], 401);
+        }
+
+        $validator = Validator::make($data, [
+            'title' => 'max:255',
+            'remote' => 'in:yes,no',
+            'type' => 'integer',
+        ]);
+
+        if($validator->fails()) {
+            return response()->json([
+                'message'   => 'Validation Failed',
+                'errors'    => $validator->errors()->all()
+            ], 422);
+        }
+		
         $job->fill($request->all());
         $job->save();
 
@@ -65,6 +102,12 @@ class JobsController extends Controller
             return response()->json([
                 'message'   => 'Record not found',
             ], 404);
+        }
+
+        if(\Auth::user()->id != $job->company_id) {
+            return response()->json([
+                'message'   => 'You haven\'t permission to delete this entry',
+            ], 401);
         }
 
         $job->delete();
